@@ -1,0 +1,154 @@
+/* ---------- Global ---------- */
+QWidget {
+    background-color: #2E3440; 
+    color: #D8DEE9; 
+    font-family: "Segoe UI", sans-serif;
+    font-size: 11pt;
+}
+
+/* ---------- Inputs ---------- */
+QLineEdit, QComboBox, QTextEdit, QDateEdit, QSpinBox, QDoubleSpinBox {
+    border: 1px solid #5e5e5e;
+    background-color: #465060;
+    color: #e6e6e6;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QLineEdit:focus,
+QComboBox:focus,
+QTextEdit:focus,
+QDateEdit:focus,
+QSpinBox:focus,
+QDoubleSpinBox:focus {
+    border: 1px solid #5E81AC;
+}
+
+/* ---------- Buttons ---------- */
+QPushButton {
+    background-color: #4C566A;
+    color: #ECEFF4;
+    border: 1px solid #434C5E;
+    border-radius: 6px;
+    padding: 6px 14px;
+    margin: 0;
+}
+
+QPushButton:hover {
+    background-color: #5E81AC;
+}
+
+QPushButton:pressed {
+    background-color: #81A1C1;
+}
+
+/* ---------- Table ---------- */
+QTableWidget {
+    background-color: #3B4252;
+    alternate-background-color: #434C5E;
+    gridline-color: #4C566A;
+    selection-background-color: #5E81AC;
+    selection-color: #ECEFF4;
+    border: 1px solid #4C566A;
+}
+
+QHeaderView::section {
+    background-color: #4C566A;
+    color: #ECEFF4;
+    padding: 6px;
+    border: none;
+    font-weight: bold;
+}
+
+QTableCornerButton::section { 
+    background-color: #2E3440;
+    border: 1px solid #3a3a3a;
+}
+
+/* ---------- Table Items ---------- */
+QTableWidget::item:hover {
+    background-color: #434C5E;
+    padding: 4px 6px;
+    border-left: 3px solid #ECEFF4;
+}
+
+/* ---------- Context Menu ---------- */
+QMenu {
+    background-color: #3B4252; 
+    color: #ECEFF4;        
+    border: 1px solid #434C5E;
+    padding: 4px;
+}
+
+QMenu::item {
+    padding: 6px 20px;
+}
+
+QMenu::item:selected {
+    background-color: #5E81AC;
+    color: #ECEFF4;
+    border-left: 3px solid #ECEFF4;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: #434C5E;
+    margin: 4px 0;
+}
+
+/* ---------- Date Picker ---------- */
+QDateEdit {
+    background-color: #4C566A;
+    border: 1px solid #434C5E;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QDateEdit::drop-down {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+}
+
+/* ---------- Calendar ---------- */
+QCalendarWidget QWidget {
+    background-color: #3B4252;
+    color: #ECEFF4;
+}
+
+QCalendarWidget QAbstractItemView:enabled {
+    background-color: #2E3440;
+    color: #e0e0e0;
+    selection-background-color: #0e639c;
+}
+
+QCalendarWidget QTableView QHeaderView::section {
+    background-color: #4C566A;
+    color: #ECEFF4;
+    border: none;
+}
+
+QCalendarWidget QTableView { 
+    background-color: #2E3440; 
+    alternate-background-color: #2E3440; 
+}
+
+/* ---------- Scrollbars ---------- */
+QScrollBar:vertical {
+    background: #2E3440;
+    width: 12px;
+}
+
+QScrollBar::handle:vertical {
+    background: #5E81AC;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #81A1C1;
+}
+
+QScrollBar::add-line,
+QScrollBar::sub-line {
+    height: 0;
+}

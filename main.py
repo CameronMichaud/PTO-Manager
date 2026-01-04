@@ -211,6 +211,8 @@ class PTOManager(QWidget):
 
         dlg = PTOVacationDialog(self, self.horizon.date())
         if dlg.exec_():
+            if dlg == 1:
+                return
             data = dlg.get_data()
 
             if data["count_weekends"]:
@@ -361,8 +363,8 @@ class PTOManager(QWidget):
         menu = QMenu()
         edit = menu.addAction("Edit Employee")
         usage = menu.addAction("Add PTO Usage")
-        vacation = menu.addAction("Add Vacation")
         history = menu.addAction("View PTO History")
+        vacation = menu.addAction("Add Vacation")
         delete = menu.addAction("Delete Employee")
 
         # REMOVE PTO
@@ -546,7 +548,7 @@ class PTOManager(QWidget):
             "id": new_id,
             "name": employee_name,
             "hire_date": QDate.currentDate().toString("yyyy-MM-dd"),
-            "total_pto": "0",
+            "total_pto": "120",
             "carryover": "0"
         }
         self.employees.append(self.employee_dict[new_id])

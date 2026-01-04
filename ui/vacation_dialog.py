@@ -44,7 +44,7 @@ class PTOVacationDialog(QDialog):
     def validate(self):
         if self.end_date.date() < self.start_date.date():
             QMessageBox.warning(self, "Invalid Range", "End date must be after start date.")
-            return
+            return 1
         self.accept()
 
     def get_data(self):

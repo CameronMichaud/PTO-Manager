@@ -10,7 +10,6 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QDate
 
-from ui.add_vacation_dialog import PTORangeDialog
 from ui.employee_dialog import EmployeeDialog
 from ui.pto_usage_dialog import PTOUsageDialog
 from ui.usage_history_dialog import UsageHistoryDialog

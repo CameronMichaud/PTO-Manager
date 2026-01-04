@@ -1,5 +1,5 @@
 import csv
-from datetime import date
+from datetime import date, datetime
 import os
 import shutil
 import sys
@@ -31,6 +31,7 @@ class PTOManager(QWidget):
         self.tray = QSystemTrayIcon(QIcon(str(resource_path(self, "icon.ico"))), self)
         self.setWindowIcon(QIcon(str(resource_path(self, "icon.ico"))))
 
+        self.backup_data()
         self.employees = load_csv(employees_file())
         self.employee_dict = {}
 
@@ -247,6 +248,37 @@ class PTOManager(QWidget):
             current_date = current_date.addDays(1)
         return days
 
+    def backup_data(self):
+        try:
+            self.kill_backups(keep=40)
+            backup_dir = get_data_dir() / "backups"
+            backup_dir.mkdir(parents=True, exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            emp_backup = backup_dir / f"pto_employees_backup_{timestamp}.csv"
+            usage_backup = backup_dir / f"pto_usage_backup_{timestamp}.csv"
+
+            shutil.copy(employees_file(), emp_backup)
+            shutil.copy(usage_file(), usage_backup)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to backup data: {e}")
+    
+    def kill_backups(self, keep=40):
+        try:
+            backup_dir = get_data_dir() / "backups"
+            if not backup_dir.exists():
+                return
+
+            emp_backups = sorted(backup_dir.glob("pto_employees_backup_*.csv"), key=os.path.getmtime)
+            usage_backups = sorted(backup_dir.glob("pto_usage_backup_*.csv"), key=os.path.getmtime)
+
+            for backups in [emp_backups, usage_backups]:
+                while len(backups) > keep:
+                    old_backup = backups.pop(0)
+                    old_backup.unlink()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to clean up backups in {backup_dir}: {e}")
+
     def save_all(self):
         save_csv(
             employees_file(),
@@ -451,28 +483,32 @@ class PTOManager(QWidget):
         QMessageBox.information(self, "Export Complete", f"Files exported successfully to {target_dir}.")
 
     def export_csv(self):
-        source = get_data_dir()
-        source.mkdir(parents=True, exist_ok=True)
+        try:
+            source = get_data_dir()
+            source.mkdir(parents=True, exist_ok=True)
 
-        target_dir = QFileDialog.getExistingDirectory(
-            self,
-            "Select Export Directory",
-            str(Path.home())
-        )
-        if not target_dir:
-            return
-        num_emps = 0
-        for emp_id, record in self.pto_usage_dict.items():
-            filename = os.path.join(target_dir, f"pto_usage_{record[0]['employee']}.csv")
-            with open(filename, "w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(["employee", "date", "hours"])
+            target_dir = QFileDialog.getExistingDirectory(
+                self,
+                "Select Export Directory",
+                str(Path.home())
+            )
+            if not target_dir:
+                return
+            num_emps = 0
+            for emp_id, record in self.pto_usage_dict.items():
+                filename = os.path.join(target_dir, f"pto_usage_{record[0]['employee']}.csv")
+                with open(filename, "w", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["employee", "date", "hours"])
 
-                for usage in record:
-                    writer.writerow([usage["employee"], usage["date"], usage["hours"]])
-            num_emps += 1
+                    for usage in record:
+                        writer.writerow([usage["employee"], usage["date"], usage["hours"]])
+                num_emps += 1
 
-        QMessageBox.information(self, "Export Complete", f"{num_emps} PTO sheets exported successfully to {target_dir}.")
+            QMessageBox.information(self, "Export Complete", f"{num_emps} PTO sheets exported successfully to {target_dir}.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to export CSV files: {e}")
+
     def get_employee_id(self, employee_name):
         for emp in self.employees:
             if emp["name"] == employee_name:
@@ -490,91 +526,102 @@ class PTOManager(QWidget):
         return new_id
 
     def import_data(self):
-        target_dir = get_data_dir()
-        target_dir.mkdir(parents=True, exist_ok=True)
-
-        source_dir = QFileDialog.getExistingDirectory(
-            self,
-            "Select Import Directory",
-            str(Path.home())
-        )
-        if not source_dir:
-            return
-
-        source_dir = Path(source_dir)
-        files = ["pto_employees.csv", "pto_usage.csv"]
-
-        for file in files:
-            if not (source_dir / file).exists():
-                QMessageBox.critical(self, "Error", f"File {file} not found in selected directory.")
-                return
         try:
+            target_dir = get_data_dir()
+            target_dir.mkdir(parents=True, exist_ok=True)
+
+            source_dir = QFileDialog.getExistingDirectory(
+                self,
+                "Select Import Directory",
+                str(Path.home())
+            )
+            if not source_dir:
+                return
+
+            source_dir = Path(source_dir)
+            files = ["pto_employees.csv", "pto_usage.csv"]
+
             for file in files:
-                shutil.copy(source_dir / file, target_dir / file)
+                if not (source_dir / file).exists():
+                    QMessageBox.critical(self, "Error", f"File {file} not found in selected directory.")
+                    return
+            try:
+                for file in files:
+                    shutil.copy(source_dir / file, target_dir / file)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to import data: {e}")
+                return
+            
+            QMessageBox.information(self, "Import Complete", "Files imported successfully.")
+
+            self.employees = load_csv(employees_file())
+            self.employee_dict = {emp["id"]: emp for emp in self.employees}
+
+            self.pto_usage = load_csv(usage_file())
+            self.update_pto_usage()
+
+            self.refresh_table()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to import data: {e}")
-            return
-        
-        QMessageBox.information(self, "Import Complete", "Files imported successfully.")
-
-        self.employees = load_csv(employees_file())
-        self.employee_dict = {emp["id"]: emp for emp in self.employees}
-
-        self.pto_usage = load_csv(usage_file())
-        self.update_pto_usage()
-
-        self.refresh_table()
     
     def import_csv_directory(self):
-        directory = QFileDialog.getExistingDirectory(
-            self,
-            "Select Directory CSV Files"
-        )
-        if not directory:
-            return
+        try:
+            directory = QFileDialog.getExistingDirectory(
+                self,
+                "Select Directory CSV Files"
+            )
+            if not directory:
+                return
 
-        imported = 0
+            imported = 0
 
-        for filename in os.listdir(directory):
-            if not filename.lower().endswith(".csv"):
-                continue
-
-            path = os.path.join(directory, filename)
-
-            with open(path, newline="", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-
-                if not {"employee", "date", "hours"}.issubset(reader.fieldnames):
+            for filename in os.listdir(directory):
+                if not filename.lower().endswith(".csv"):
                     continue
 
-                rows = list(reader)
-                if not rows:
-                    continue
+                path = os.path.join(directory, filename)
 
-                employee_name = rows[0]["employee"]
-                employee_id = self.get_employee_id(employee_name)
+                with open(path, newline="", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
 
-                for row in rows:
-                    usage = {
-                        "id": str(uuid.uuid4()),
-                        "employee_id": employee_id,
-                        "employee": employee_name,
-                        "date": row["date"],
-                        "hours": float(row["hours"])
-                    }
+                    if not {"employee", "date", "hours"}.issubset(reader.fieldnames):
+                        QMessageBox.warning(
+                            self,
+                            "Invalid CSV",
+                            f"CSV file {filename} not formatted correctly: employee, date, hours."
+                        )
+                        continue
 
-                    self.pto_usage.append(usage)
-                    self.pto_usage_dict.setdefault(employee_id, []).append(usage)
-                    imported += 1
+                    rows = list(reader)
+                    if not rows:
+                        continue
 
-        self.save_all()
-        self.refresh_table()
+                    employee_name = rows[0]["employee"]
+                    employee_id = self.get_employee_id(employee_name)
 
-        QMessageBox.information(
-            self,
-            "Import Complete",
-            f"Imported {imported} PTO entries successfully."
-        )
+                    for row in rows:
+                        usage = {
+                            "id": str(uuid.uuid4()),
+                            "employee_id": employee_id,
+                            "employee": employee_name,
+                            "date": row["date"],
+                            "hours": float(row["hours"])
+                        }
+
+                        self.pto_usage.append(usage)
+                        self.pto_usage_dict.setdefault(employee_id, []).append(usage)
+                        imported += 1
+
+            self.save_all()
+            self.refresh_table()
+
+            QMessageBox.information(
+                self,
+                "Import Complete",
+                f"Imported {imported} PTO entries successfully."
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to import CSV files: {e}")
 
 
 if __name__ == "__main__":

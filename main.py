@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QDate
 
+from ui.add_vacation_dialog import PTORangeDialog
 from ui.employee_dialog import EmployeeDialog
 from ui.pto_usage_dialog import PTOUsageDialog
 from ui.usage_history_dialog import UsageHistoryDialog
@@ -208,17 +209,32 @@ class PTOManager(QWidget):
         dlg = PTOUsageDialog(self)
         if dlg.exec_():
             data = dlg.get_data()
-            usage = {
-                "id": str(uuid.uuid4()),
-                "employee_id": id,
-                "employee": emp["name"],
-                **data
-            }
 
-            self.pto_usage.append(usage)
-            self.pto_usage_dict.setdefault(id, []).append(usage)
+            weekdays = self.get_weekdays( data["start_date"], data["end_date"] )
+
+            for day in weekdays:
+                usage = {
+                    "id": str(uuid.uuid4()),
+                    "employee_id": id,
+                    "employee": emp["name"],
+                    "date": day.toString("yyyy-MM-dd"),
+                    "hours": data["hours"]
+                }
+
+                self.pto_usage.append(usage)
+                self.pto_usage_dict.setdefault(id, []).append(usage)
+
             self.save_all()
             self.refresh_table()
+
+    def get_weekdays(self, start_date, end_date):
+        weekdays = []
+        current_date = start_date
+        while current_date <= end_date:
+            if current_date.dayOfWeek() <= 5:
+                weekdays.append(current_date)
+            current_date = current_date.addDays(1)
+        return weekdays
 
     def save_all(self):
         save_csv(

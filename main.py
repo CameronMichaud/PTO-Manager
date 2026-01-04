@@ -376,6 +376,8 @@ class PTOManager(QWidget):
         data_menu = menu.addMenu("Data")
         export_csv = data_menu.addAction("Export PTO CSVs")
         import_csv = data_menu.addAction("Import PTO CSVs")
+        export_employees = data_menu.addAction("Export Employees CSV")
+        import_employees = data_menu.addAction("Import Employees CSV")
         export_ = data_menu.addAction("Export App Data")
         import_ = data_menu.addAction("Import App Data")
 
@@ -450,6 +452,11 @@ class PTOManager(QWidget):
             self.import_data()
         elif action == import_csv:
             self.import_csv_directory()
+        elif action == import_employees:
+            self.import_employee_csv()
+        elif action == export_employees:
+            self.export_employee_csv()
+        
 
         elif action == dark_theme:
             apply_theme(self, "theme_dark")
@@ -541,18 +548,10 @@ class PTOManager(QWidget):
     def get_employee_id(self, employee_name):
         for emp in self.employees:
             if emp["name"] == employee_name:
-                return emp["id"]
+                return emp["id"], 0
         
         new_id = str(uuid.uuid4())
-        self.employee_dict[new_id] = {
-            "id": new_id,
-            "name": employee_name,
-            "hire_date": QDate.currentDate().toString("yyyy-MM-dd"),
-            "total_pto": "120",
-            "carryover": "0"
-        }
-        self.employees.append(self.employee_dict[new_id])
-        return new_id
+        return new_id, 1
 
     def import_data(self):
         try:
@@ -626,7 +625,17 @@ class PTOManager(QWidget):
                         continue
 
                     employee_name = rows[0]["employee"]
-                    employee_id = self.get_employee_id(employee_name)
+                    employee_id, return_code = self.get_employee_id(employee_name)
+
+                    if return_code == 1:
+                        self.employee_dict[employee_id] = {
+                            "id": employee_id,
+                            "name": employee_name,
+                            "hire_date": QDate.currentDate().toString("yyyy-MM-dd"),
+                            "total_pto": "120",
+                            "carryover": "0"
+                        }
+                        self.employees.append(self.employee_dict[employee_id])
 
                     for row in rows:
                         usage = {
@@ -651,6 +660,95 @@ class PTOManager(QWidget):
             )
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to import CSV files: {e}")
+
+    def import_employee_csv(self):
+        try:
+            directory = QFileDialog.getExistingDirectory(
+                self,
+                "Select Directory CSV File"
+            )
+            if not directory:
+                return
+
+            imported = 0
+
+            for filename in os.listdir(directory):
+                if not filename.lower().endswith(".csv"):
+                    continue
+
+                path = os.path.join(directory, filename)
+
+                with open(path, newline="", encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+
+                    if not {"name", "hire_date", "total_pto"}.issubset(reader.fieldnames):
+                        QMessageBox.warning(
+                            self,
+                            "Invalid CSV",
+                            f"CSV file {filename} not formatted correctly: name, hire_date, total_pto."
+                        )
+                        continue
+
+                    rows = list(reader)
+                    if not rows:
+                        continue
+
+                    for row in rows:
+                        employee_name = row["name"]
+                        employee_id, return_code = self.get_employee_id(employee_name)
+
+                        if return_code == 0:
+                            continue
+                        
+                        employee = {
+                            "id": employee_id,
+                            "name": employee_name,
+                            "hire_date": row["hire_date"],
+                            "total_pto": float(row["total_pto"]),
+                            "carryover": "0"
+                        }
+
+                        self.employees.append(employee)
+                        self.employee_dict[employee_id] = employee
+                        imported += 1
+
+            self.save_all()
+            self.refresh_table()
+
+            QMessageBox.information(
+                self,
+                "Import Complete",
+                f"Imported {imported} employee entries successfully."
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to import CSV files: {e}")
+        
+    def export_employee_csv(self):
+        try:
+            source = get_data_dir()
+            source.mkdir(parents=True, exist_ok=True)
+
+            target_dir = QFileDialog.getExistingDirectory(
+                self,
+                "Select Export Directory",
+                str(Path.home())
+            )
+            if not target_dir:
+                return
+            num_emps = 0
+
+            filename = os.path.join(target_dir, f"employee_sheet.csv")
+            with open(filename, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["name", "hire_date", "total_pto"])
+                
+                for emp_id, record in self.employee_dict.items():
+                    writer.writerow([record["name"], record["hire_date"], record["total_pto"]])
+                    num_emps += 1
+
+            QMessageBox.information(self, "Export Complete", f"{num_emps} employees exported successfully to {target_dir}.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to export CSV files: {e}")
 
 
 if __name__ == "__main__":

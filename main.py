@@ -1,4 +1,6 @@
+import csv
 from datetime import date
+import os
 import shutil
 import sys
 from PyQt5.QtWidgets import (
@@ -313,8 +315,10 @@ class PTOManager(QWidget):
         delete_all_year = remove_pto_menu.addAction("Delete Old PTO (All)")
         # DATA
         data_menu = menu.addMenu("Data")
-        export_ = data_menu.addAction("Export Data")
-        import_ = data_menu.addAction("Import Data")
+        export_csv = data_menu.addAction("Export PTO CSVs")
+        import_csv = data_menu.addAction("Import PTO CSVs")
+        export_ = data_menu.addAction("Export App Data")
+        import_ = data_menu.addAction("Import App Data")
 
         # THEMES
         theme_menu = menu.addMenu("Themes")
@@ -377,10 +381,14 @@ class PTOManager(QWidget):
                 self.refresh_table()
         elif action == delete:
             self.delete_employee(row)
+        elif action == export_csv:
+            self.export_csv()
         elif action == export_:
             self.export_data()
         elif action == import_:
             self.import_data()
+        elif action == import_csv:
+            self.import_csv_directory()
 
         elif action == dark_theme:
             apply_theme(self, "theme_dark")
@@ -439,9 +447,48 @@ class PTOManager(QWidget):
                 except Exception as e:
                     QMessageBox.critical(self, "Error", f"Failed to export {file}: {e}")
                     return
+
+        QMessageBox.information(self, "Export Complete", f"Files exported successfully to {target_dir}.")
+
+    def export_csv(self):
+        source = get_data_dir()
+        source.mkdir(parents=True, exist_ok=True)
+
+        target_dir = QFileDialog.getExistingDirectory(
+            self,
+            "Select Export Directory",
+            str(Path.home())
+        )
+        if not target_dir:
+            return
+        num_emps = 0
+        for emp_id, record in self.pto_usage_dict.items():
+            filename = os.path.join(target_dir, f"pto_usage_{record[0]['employee']}.csv")
+            with open(filename, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["employee", "date", "hours"])
+
+                for usage in record:
+                    writer.writerow([usage["employee"], usage["date"], usage["hours"]])
+            num_emps += 1
+
+        QMessageBox.information(self, "Export Complete", f"{num_emps} PTO sheets exported successfully to {target_dir}.")
+    def get_employee_id(self, employee_name):
+        for emp in self.employees:
+            if emp["name"] == employee_name:
+                return emp["id"]
         
-        QMessageBox.information(self, "Export Complete", "Files exported successfully.")
-    
+        new_id = str(uuid.uuid4())
+        self.employee_dict[new_id] = {
+            "id": new_id,
+            "name": employee_name,
+            "hire_date": QDate.currentDate().toString("yyyy-MM-dd"),
+            "total_pto": "0",
+            "carryover": "0"
+        }
+        self.employees.append(self.employee_dict[new_id])
+        return new_id
+
     def import_data(self):
         target_dir = get_data_dir()
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -477,6 +524,58 @@ class PTOManager(QWidget):
         self.update_pto_usage()
 
         self.refresh_table()
+    
+    def import_csv_directory(self):
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select Directory CSV Files"
+        )
+        if not directory:
+            return
+
+        imported = 0
+
+        for filename in os.listdir(directory):
+            if not filename.lower().endswith(".csv"):
+                continue
+
+            path = os.path.join(directory, filename)
+
+            with open(path, newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+
+                if not {"employee", "date", "hours"}.issubset(reader.fieldnames):
+                    continue
+
+                rows = list(reader)
+                if not rows:
+                    continue
+
+                employee_name = rows[0]["employee"]
+                employee_id = self.get_employee_id(employee_name)
+
+                for row in rows:
+                    usage = {
+                        "id": str(uuid.uuid4()),
+                        "employee_id": employee_id,
+                        "employee": employee_name,
+                        "date": row["date"],
+                        "hours": float(row["hours"])
+                    }
+
+                    self.pto_usage.append(usage)
+                    self.pto_usage_dict.setdefault(employee_id, []).append(usage)
+                    imported += 1
+
+        self.save_all()
+        self.refresh_table()
+
+        QMessageBox.information(
+            self,
+            "Import Complete",
+            f"Imported {imported} PTO entries successfully."
+        )
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

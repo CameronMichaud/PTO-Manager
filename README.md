@@ -1,5 +1,5 @@
 ## PTO Management Tool
-- See PTO accrual at any date
+- See PTO Accrual at Any Date
 <img width="896" height="513" alt="image" src="readme_screenshots/View_As_Of.png" />
 
 - View Employee PTO History and Manage Usage

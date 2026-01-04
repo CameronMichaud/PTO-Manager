@@ -2,7 +2,7 @@
 - See PTO accrual at any date
 <img width="896" height="513" alt="image" src="readme_screenshots/View_As_Of.png" />
 
-- View employee PTO history and manage usage
+- View Employee PTO History and Manage Usage
 <img width="1014" height="616" alt="image" src="readme_screenshots/Dashboard.png" />
 <img width="1322" height="694" alt="image" src="readme_screenshots/PTO_History_Dashboard.png" />
 
@@ -22,9 +22,13 @@ Exporting PTO will output a CSV for each employee to the assigned directory with
 
 - Importing PTO
   
-First create the employees inside of the app and then import any directory containing CSVs formatted as: employee, date, hours - with date being (mm-dd-yyyy) format. If employees are not created prior to the import then a new employee will be created and assigned the PTO according to the name but the hire date and total PTO fields will be 0 and can be edited later.
+First create the employees inside of the app and then import any directory containing CSVs formatted as: employee, date, hours - with date being (mm-dd-yyyy) format. If employees are not created prior to the import then a new employee will be created and assigned the PTO according to the name but the hire date will be 0 and total pto defaulted to 120 and can be edited later.
 
 Note: importing app data from a prior export of app data will carry over both employee information and PTO information.
+
+- Importing/Exporting Employee CSVs
+
+Exporting and importing takes the format: name, hire_date, total_pto, the program will iterate through each CSV in the directory until one has the same header and then import all rows.
 
 - Import/Export App Data
   

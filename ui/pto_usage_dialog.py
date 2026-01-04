@@ -12,45 +12,29 @@ class PTOUsageDialog(QDialog):
             horizon_date = QDate.currentDate()
             
         self.setWindowTitle("Add PTO Usage")
-        self.resize(350, 260)
+        self.resize(350, 100)
 
         layout = QVBoxLayout(self)
         form = QFormLayout()
 
-        self.start_date = QDateEdit(horizon_date)
-        self.start_date.setCalendarPopup(True)
-
-        self.end_date = QDateEdit(horizon_date)
-        self.end_date.setCalendarPopup(True)
+        self.date = QDateEdit(horizon_date)
+        self.date.setCalendarPopup(True)
 
         self.hours = QDoubleSpinBox()
         self.hours.setMaximum(24)
         self.hours.setValue(8)
 
-        self.count_weekends = QCheckBox("Count Weekends")
-        self.count_weekends.setChecked(False)
-
         save = QPushButton("Save")
-        save.clicked.connect(self.validate)
+        save.clicked.connect(self.accept)
 
-        form.addRow("Start Date", self.start_date)
-        form.addRow("End Date", self.end_date)
-        form.addRow("Hours Used", self.hours)
-        form.addRow(self.count_weekends)
+        form.addRow("Date", self.date)
+        form.addRow("Hours", self.hours)
 
         layout.addLayout(form)
         layout.addWidget(save)
 
-    def validate(self):
-        if self.end_date.date() < self.start_date.date():
-            QMessageBox.warning(self, "Invalid Range", "End date must be after start date.")
-            return
-        self.accept()
-
     def get_data(self):
         return {
-            "start_date": self.start_date.date(),
-            "end_date": self.end_date.date(),
-            "hours": self.hours.value(),
-            "count_weekends": self.count_weekends.isChecked()
+            "date": self.date.date().toString("yyyy-MM-dd"),
+            "hours": self.hours.value()
         }

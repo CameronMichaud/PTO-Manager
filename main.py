@@ -15,6 +15,7 @@ from PyQt5.QtCore import QDate
 from ui.employee_dialog import EmployeeDialog
 from ui.pto_usage_dialog import PTOUsageDialog
 from ui.usage_history_dialog import UsageHistoryDialog
+from ui.vacation_dialog import PTOVacationDialog
 from util.pto_calc import calculate_pto, calculate_used_pto
 from util.storage import load_csv, save_csv, employees_file, usage_file, get_data_dir
 
@@ -204,11 +205,11 @@ class PTOManager(QWidget):
             self.save_all()
             self.refresh_table()
 
-    def add_pto_usage(self, row):
+    def add_vacation(self, row):
         id = self.table.item(row, 7).text()
         emp = self.employee_dict[id]
 
-        dlg = PTOUsageDialog(self, self.horizon.date())
+        dlg = PTOVacationDialog(self, self.horizon.date())
         if dlg.exec_():
             data = dlg.get_data()
 
@@ -232,6 +233,27 @@ class PTOManager(QWidget):
             self.save_all()
             self.refresh_table()
 
+    def add_pto_usage(self, row):
+        id = self.table.item(row, 7).text()
+        emp = self.employee_dict[id]
+
+        dlg = PTOUsageDialog(self, self.horizon.date())
+        if dlg.exec_():
+            data = dlg.get_data()
+
+            usage = {
+                "id": str(uuid.uuid4()),
+                "employee_id": id,
+                "employee": emp["name"],
+                **data
+            }
+
+            self.pto_usage.append(usage)
+            self.pto_usage_dict.setdefault(id, []).append(usage)
+
+            self.save_all()
+            self.refresh_table()
+
     def get_weekdays(self, start_date, end_date):
         weekdays = []
         current_date = start_date
@@ -250,6 +272,8 @@ class PTOManager(QWidget):
 
     def backup_data(self):
         try:
+            if not employees_file().exists() and not usage_file().exists():
+                return
             self.kill_backups(keep=40)
             backup_dir = get_data_dir() / "backups"
             backup_dir.mkdir(parents=True, exist_ok=True)
@@ -337,6 +361,7 @@ class PTOManager(QWidget):
         menu = QMenu()
         edit = menu.addAction("Edit Employee")
         usage = menu.addAction("Add PTO Usage")
+        vacation = menu.addAction("Add Vacation")
         history = menu.addAction("View PTO History")
         delete = menu.addAction("Delete Employee")
 
@@ -370,6 +395,8 @@ class PTOManager(QWidget):
             self.edit_employee(row)
         elif action == usage:
             self.add_pto_usage(row)
+        elif action == vacation:
+            self.add_vacation(row)
         elif action == history:
             id = self.table.item(row, 7).text()
             name = self.table.item(row, 0).text()

@@ -205,13 +205,16 @@ class PTOManager(QWidget):
         id = self.table.item(row, 7).text()
         emp = self.employee_dict[id]
 
-        dlg = PTOUsageDialog(self)
+        dlg = PTOUsageDialog(self, self.horizon.date())
         if dlg.exec_():
             data = dlg.get_data()
 
-            weekdays = self.get_weekdays( data["start_date"], data["end_date"] )
+            if data["count_weekends"]:
+                days = self.get_all_days( data["start_date"], data["end_date"] )
+            else:
+                days = self.get_weekdays( data["start_date"], data["end_date"] )
 
-            for day in weekdays:
+            for day in days:
                 usage = {
                     "id": str(uuid.uuid4()),
                     "employee_id": id,
@@ -234,6 +237,13 @@ class PTOManager(QWidget):
                 weekdays.append(current_date)
             current_date = current_date.addDays(1)
         return weekdays
+    def get_all_days(self, start_date, end_date):
+        days = []
+        current_date = start_date
+        while current_date <= end_date:
+            days.append(current_date)
+            current_date = current_date.addDays(1)
+        return days
 
     def save_all(self):
         save_csv(
